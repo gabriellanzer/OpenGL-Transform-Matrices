@@ -11,9 +11,12 @@
 //Auxiliar Libraries
 #include <stdio.h>
 #include <glm/glm.hpp>
-#include <glm/common.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
+//Internal Includes
 #include "auxiliar_funcs.hpp"
 
 int main(void)

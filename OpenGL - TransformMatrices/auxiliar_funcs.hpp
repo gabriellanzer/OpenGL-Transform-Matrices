@@ -292,6 +292,14 @@ static void create_nyan_square()
 
 static int dimension = 2;
 static int matMode = 2;
+static float xRot = 0;
+static float xRotCur = 0;
+static float yRot = 0;
+static float yRotCur = 0;
+static float zRot = 0;
+static float zRotCur = 0;
+static glm::vec3 xyzPos = glm::vec3(0);
+static glm::vec3 xyzPosCur = glm::vec3(0);
 static void init_frame(glm::mat4& mat)
 {
 	glfwPollEvents();
@@ -325,11 +333,25 @@ static void init_frame(glm::mat4& mat)
 		if (matMode == 2) {
 			ImGui::DragFloat2("##0", reinterpret_cast<float*>(&mat[0][0]), 0.01f);
 			ImGui::DragFloat2("##1", reinterpret_cast<float*>(&mat[1][0]), 0.01f);
+			ImGui::SliderAngle("Z-ROT", &zRot);
 		}
 		else if (matMode == 3) {
 			ImGui::DragFloat3("##0", reinterpret_cast<float*>(&mat[0][0]), 0.01f);
 			ImGui::DragFloat3("##1", reinterpret_cast<float*>(&mat[1][0]), 0.01f);
 			ImGui::DragFloat3("##2", reinterpret_cast<float*>(&mat[2][0]), 0.01f);
+			if (dimension == 2) {
+				ImGui::SliderAngle("Z-ROT", &zRot);
+				ImGui::SliderFloat2("XY-POS", &xyzPos[0], -10.0f, 10.0f);
+				glm::vec2 diff = xyzPos - xyzPosCur;
+				glm::mat3 output = glm::translate(*reinterpret_cast<glm::mat3*>(&mat), diff);
+				mat = reinterpret_cast<glm::mat4&>(output);
+				xyzPosCur = xyzPos;
+			}
+			if (dimension == 3) {
+				ImGui::SliderAngle("X-ROT", &xRot);
+				ImGui::SliderAngle("Y-ROT", &yRot);
+				ImGui::SliderAngle("Z-ROT", &zRot);
+			}
 		}
 		else if (matMode == 4) {
 			ImGui::DragFloat4("##0", reinterpret_cast<float*>(&mat[0][0]), 0.01f);
