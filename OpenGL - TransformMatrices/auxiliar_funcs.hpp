@@ -41,7 +41,7 @@ static void check_compile_errors(GLuint shader)
 static void check_link_errors(GLuint program, GLuint vertexShader, GLuint fragmentShader)
 {
 	GLint isLinked = 0;
-	glGetProgramiv(program, GL_LINK_STATUS, (int*)& isLinked);
+	glGetProgramiv(program, GL_LINK_STATUS, (int*)&isLinked);
 	if (isLinked == GL_FALSE)
 	{
 		GLint maxLength = 0;
@@ -62,7 +62,7 @@ static void check_link_errors(GLuint program, GLuint vertexShader, GLuint fragme
 const char* load_shader(const char* filePath) {
 	std::ifstream in(filePath, std::ifstream::binary);
 	if (!in.is_open()) {
-		fprintf(stderr, "Arquivo nao encontrado\n");
+		fprintf(stderr, "Arquivo de shader encontrado: \"%s\"\n", filePath);
 		return nullptr;
 	}
 	in.seekg(0, std::ifstream::end);
@@ -160,7 +160,7 @@ static GLuint programHandle3D;
 static void setup_shaders()
 {
 	//Frag with texture
-	const char* fragmentShaderText = load_shader("data/shaders/shader.frag");
+	const char* fragmentShaderText = load_shader("./data/shaders/shader.frag");
 	fragmentShaderHandle = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShaderHandle, 1, &fragmentShaderText, NULL);
 	glCompileShader(fragmentShaderHandle);
@@ -168,7 +168,7 @@ static void setup_shaders()
 	delete fragmentShaderText;
 
 	//2D transform
-	const char* vertexShaderText = load_shader("data/shaders/shader2D.vert");
+	const char* vertexShaderText = load_shader("./data/shaders/shader2D.vert");
 	vertexShaderHandle = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShaderHandle, 1, &vertexShaderText, NULL);
 	glCompileShader(vertexShaderHandle);
@@ -186,7 +186,7 @@ static void setup_shaders()
 	glDeleteShader(vertexShaderHandle);
 
 	//3D transform
-	vertexShaderText = load_shader("data/shaders/shader3D.vert");
+	vertexShaderText = load_shader("./data/shaders/shader3D.vert");
 	vertexShaderHandle = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShaderHandle, 1, &vertexShaderText, NULL);
 	glCompileShader(vertexShaderHandle);
@@ -262,7 +262,7 @@ static void create_nyan_square()
 	/* Image data */
 	int imgWidth, imgHeight, channels;
 	unsigned char* imgData;
-	if ((imgData = stbi_load("data/textures/nyan.png", &imgWidth, &imgHeight, &channels, 0)) == nullptr)
+	if ((imgData = stbi_load("./data/textures/nyan.png", &imgWidth, &imgHeight, &channels, 0)) == nullptr)
 	{
 		fprintf(stderr, "Error loading image: %s\n", "nyan.png");
 		return;
@@ -293,13 +293,9 @@ static void create_nyan_square()
 static int dimension = 2;
 static int matMode = 2;
 static float xRot = 0;
-static float xRotCur = 0;
 static float yRot = 0;
-static float yRotCur = 0;
 static float zRot = 0;
-static float zRotCur = 0;
 static glm::vec3 xyzPos = glm::vec3(0);
-static glm::vec3 xyzPosCur = glm::vec3(0);
 static void init_frame(glm::mat4& mat)
 {
 	glfwPollEvents();
@@ -311,15 +307,18 @@ static void init_frame(glm::mat4& mat)
 	{
 		if (ImGui::BeginMenuBar())
 		{
-			if (ImGui::MenuItem("2D (2x2)")) { dimension = 2; matMode = 2; }
-			if (ImGui::MenuItem("2D (3x3)")) { dimension = 2; matMode = 3; }
-			if (ImGui::MenuItem("3D (3x3)")) { dimension = 3; matMode = 3; }
+			bool changed = false;
+			if (ImGui::MenuItem("2D (2x2)")) { dimension = 2; matMode = 2; mat = (glm::mat2)mat; }
+			if (ImGui::MenuItem("2D (3x3)")) { dimension = 2; matMode = 3; mat = (glm::mat3)mat; }
+			if (ImGui::MenuItem("3D (3x3)")) { dimension = 3; matMode = 3; mat = (glm::mat3)mat; }
 			if (ImGui::MenuItem("3D (4x4)")) { dimension = 3; matMode = 4; }
 			ImGui::EndMenuBar();
 		}
 		if (ImGui::Button("RESET"))
 		{
 			mat = glm::mat4(1);
+			xRot = yRot = zRot = 0;
+			xyzPos = glm::vec3(0);
 		}
 		ImGui::SameLine();
 		if (dimension == 2)
@@ -333,24 +332,35 @@ static void init_frame(glm::mat4& mat)
 		if (matMode == 2) {
 			ImGui::DragFloat2("##0", reinterpret_cast<float*>(&mat[0][0]), 0.01f);
 			ImGui::DragFloat2("##1", reinterpret_cast<float*>(&mat[1][0]), 0.01f);
-			ImGui::SliderAngle("Z-ROT", &zRot);
+			if (ImGui::SliderAngle("Z-ROT", &zRot, -180, 180))
+			{
+				mat = glm::eulerAngleZ(zRot);
+			}
 		}
 		else if (matMode == 3) {
 			ImGui::DragFloat3("##0", reinterpret_cast<float*>(&mat[0][0]), 0.01f);
 			ImGui::DragFloat3("##1", reinterpret_cast<float*>(&mat[1][0]), 0.01f);
 			ImGui::DragFloat3("##2", reinterpret_cast<float*>(&mat[2][0]), 0.01f);
 			if (dimension == 2) {
-				ImGui::SliderAngle("Z-ROT", &zRot);
-				ImGui::SliderFloat2("XY-POS", &xyzPos[0], -10.0f, 10.0f);
-				glm::vec2 diff = xyzPos - xyzPosCur;
-				glm::mat3 output = glm::translate(*reinterpret_cast<glm::mat3*>(&mat), diff);
-				mat = reinterpret_cast<glm::mat4&>(output);
-				xyzPosCur = xyzPos;
+				if (ImGui::SliderAngle("Z-ROT", &zRot, -180, 180)) {
+					glm::mat2 rot = glm::eulerAngleZ(zRot);
+					mat[0][0] = rot[0][0]; mat[0][1] = rot[0][1];
+					mat[1][0] = rot[1][0]; mat[1][1] = rot[1][1];
+				}
+				if (ImGui::SliderFloat2("XY-POS", &xyzPos[0], -1.5f, 1.5f)) {
+					mat[0][2] = xyzPos[0];
+					mat[1][2] = xyzPos[1];
+				}
 			}
 			if (dimension == 3) {
-				ImGui::SliderAngle("X-ROT", &xRot);
-				ImGui::SliderAngle("Y-ROT", &yRot);
-				ImGui::SliderAngle("Z-ROT", &zRot);
+				bool angleChanged = false;
+				angleChanged |= ImGui::SliderAngle("X-ROT", &xRot, -180, 180);
+				angleChanged |= ImGui::SliderAngle("Y-ROT", &yRot, -180, 180);
+				angleChanged |= ImGui::SliderAngle("Z-ROT", &zRot, -180, 180);
+				if (angleChanged)
+				{
+					mat = glm::eulerAngleXYZ(xRot, yRot, zRot);
+				}
 			}
 		}
 		else if (matMode == 4) {
@@ -358,6 +368,22 @@ static void init_frame(glm::mat4& mat)
 			ImGui::DragFloat4("##1", reinterpret_cast<float*>(&mat[1][0]), 0.01f);
 			ImGui::DragFloat4("##2", reinterpret_cast<float*>(&mat[2][0]), 0.01f);
 			ImGui::DragFloat4("##3", reinterpret_cast<float*>(&mat[3][0]), 0.01f);
+			bool angleChanged = false;
+			angleChanged |= ImGui::SliderAngle("X-ROT", &xRot, -180, 180);
+			angleChanged |= ImGui::SliderAngle("Y-ROT", &yRot, -180, 180);
+			angleChanged |= ImGui::SliderAngle("Z-ROT", &zRot, -180, 180);
+			if (angleChanged)
+			{
+				glm::mat3 rot = glm::eulerAngleXYZ(xRot, yRot, zRot);
+				mat[0][0] = rot[0][0]; mat[0][1] = rot[0][1]; mat[0][2] = rot[0][2];
+				mat[1][0] = rot[1][0]; mat[1][1] = rot[1][1]; mat[1][2] = rot[1][2];
+				mat[2][0] = rot[2][0]; mat[2][1] = rot[2][1]; mat[2][2] = rot[2][2];
+			}
+			if (ImGui::SliderFloat3("XYZ-POS", &xyzPos[0], -1.5f, 1.5f)) {
+				mat[0][3] = xyzPos[0];
+				mat[1][3] = xyzPos[1];
+				mat[2][3] = xyzPos[2];
+			}
 		}
 	}
 	ImGui::End();

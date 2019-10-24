@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/matrix_transform_2d.hpp>
+#include <glm/gtx/euler_angles.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
